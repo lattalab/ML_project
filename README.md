@@ -1,5 +1,6 @@
 ## Base directory
 Dataset: https://www.kaggle.com/datasets/awsaf49/asvpoof-2019-dataset
+
 currently developed on `PA` dataset.
 
 ### code description (start at 2024/3/18)
@@ -14,8 +15,8 @@ currently developed on `PA` dataset.
 
 ## Linebot (start at 2024/6/15)
 1. 去Line Developement 建立一個LineBot
-2. 回應設定:Webhook要打開
-3. 找到屬於LineBot的CHANNEL_ACCESS_TOKEN 跟 CHANNEL_SECRET
+2. 回應設定:Webhook要打開 (用來設定callback網址用的)
+3. 找到屬於LineBot的CHANNEL_ACCESS_TOKEN 跟 CHANNEL_SECRET 及 USER_ID
 4. 可以在Line Developement做簡單的reply功能
 
 i. 準備好.py檔 (用來執行複雜的/rate 跟 匯率換算)  
@@ -29,10 +30,13 @@ requirements.txt 程式所需要的套件集
 Build Command:./build.sh  (會執行build.sh的功能)  
 
 ### 設計理念
-由client.cpp上傳資料到指定網站上，在啟動Linebot警告功能。(但不是最終vitis-ai的執行檔)
+把這個當作專題當中vitis-ai的後處理。 (目前算完成)
+由client.cpp or client.py 上傳資料到指定網站上，在啟動Linebot警告功能。(但不是最終vitis-ai的執行檔)
 
 ### Result
 能成功上板執行，得出警示作用。
+在client執行成功會得到:
+![image](https://github.com/lattalab/ML_project/assets/91266449/a2c274e3-6496-4676-8a7d-ea70869eda96)
 
 ![image](https://github.com/lattalab/ML_project/assets/91266449/5690c754-157d-48be-8c44-7fea073e252e)
 
@@ -46,5 +50,5 @@ ref: https://github.com/ewan-xu/LibrosaCpp
 ### Result
 vitis-ai可以跑python，暫定不需要研究C++轉成頻譜圖。
 
-## denoise
+## denoise (start at 2024/6/30)
 TODO
