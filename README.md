@@ -43,8 +43,8 @@ Build Command:./build.sh  (會執行build.sh的功能)
 ## CH_AiSound (2024/6/24)
 * spectrum.py & model.ipynb: 開始訓練分辨中文合成語音模型
 資料來自`CFAD`跟自行生成的語音(elevanlabs、TTSMAKER)
-* spectrum.cpp: 嘗試用C++寫出python librosa轉換成頻譜圖功能，引用其他公開程式碼
-ref: https://github.com/ewan-xu/LibrosaCpp
+* spectrum.cpp: 嘗試用C++寫出python librosa轉換成頻譜圖功能，引用其他公開程式碼  
+  ref: https://github.com/ewan-xu/LibrosaCpp
 * fake & real : 模型訓練時用到的頻譜圖
 
 ### Result
@@ -55,7 +55,7 @@ Make use of `noisereduce` library to achieve denoise feature.
 
 Further:
 * remove echo sound
-* 離麥克風距離遠近收音 (假設都盡量在近的地方收音)
+* 離麥克風距離遠近可能影響收音 (目前假設都盡量在近的地方收音)
 
 ### Result
 暫定用noisereduce去雜音效果不錯，其他問題會影響模型再來調適。  
