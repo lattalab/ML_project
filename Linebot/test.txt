@@ -1,0 +1,5 @@
+# This testfile illustrate how client should be read
+# fake/read: the result of model consideration
+# number: how many spectrograms was considerated at this category
+
+fake: 3 ;real: 4

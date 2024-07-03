@@ -46,7 +46,7 @@ int main(void)
 {
 
     // 指定file path
-    std::string filepath = "C:/Users/vlva8/OneDrive/Desktop/test.txt";
+    std::string filepath = "filepath";
     // 讀取file
     std::string readBuffer = read_file(filepath);
 
@@ -58,7 +58,7 @@ int main(void)
     cout << "json data: " << fw.write(root) << endl;
 
     string strData = root.toStyledString();
-    string url = "https://ml-project-1r0x.onrender.com/receive_text";
+    string url = "your_websit";
 
     int res = upload(url, strData);
     cout << res << endl;
