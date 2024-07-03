@@ -51,4 +51,11 @@ ref: https://github.com/ewan-xu/LibrosaCpp
 vitis-ai可以跑python，暫定不需要研究C++轉成頻譜圖。
 
 ## denoise (start at 2024/6/30)
-TODO
+Make use of `noisereduce` library to achieve denoise feature.
+
+Further:
+* remove echo sound
+* 離麥克風距離遠近收音 (假設都盡量在近的地方收音)
+
+### Result
+暫定用noisereduce去雜音效果不錯，其他問題會影響模型再來調適。  
