@@ -118,3 +118,26 @@ def envelope(y, rate, threshold):
 def normalize_audio(audio):
     return (audio - np.min(audio)) / (np.max(audio) - np.min(audio))
 
+########## 新增部分 ##########
+import noisereduce as nr
+def denoise(audio, sr=SAMPLE_RATE):
+    # 降噪處理
+    # 藉由設置stationary=True，達成去雜音效果(不知是否有其他BUG)
+    reduced_noise = nr.reduce_noise(y=audio, sr=SAMPLE_RATE, stationary=True)
+    return reduced_noise
+
+# 這邊不知道為什麼不能用，所以先註解掉
+# from pedalboard import Pedalboard, NoiseGate, Compressor, LowShelfFilter, Gain
+# # 設置音訊處理管道
+# def process_audio(audio, sr=SAMPLE_RATE):
+#     # 看影片學到的，但沒有深入研究，貌似有平衡音量、防止echo聲音的效果
+#     board = Pedalboard([
+#         NoiseGate(threshold_db=-30, ratio=1.5),  # 閾值設置為 -30 dB
+#         Compressor(threshold_db=-16, ratio=2.5),  # 壓縮器設置
+#         LowShelfFilter(cutoff_frequency_hz=400, gain_db=10, q=1),  # 低架濾波器設置，200 Hz 以下降低 6 dB
+#         Gain(gain_db=10)  # 增加 3 dB 的增益
+#     ])
+
+#     # Run the audio through this pedalboard!
+#     effected = board(audio, sr)
+#     return effected
