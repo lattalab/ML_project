@@ -55,7 +55,7 @@ def send_message(text):
 
     for message in messages:
         # 傳送訊息到指定用戶(add your user_id)
-        line_bot_api.push_message(user_id, TextSendMessage(text=message))
+        line_bot_api.broadcast(message)
 
 @app.route("/callback", methods=['POST'])
 def callback():
