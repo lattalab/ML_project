@@ -50,6 +50,14 @@ Build Command:./build.sh  (會執行build.sh的功能)
 ### Result
 vitis-ai可以跑python，暫定不需要研究C++轉成頻譜圖。
 
+### Update (2024/7/12)
+因為轉圖片的前處理太久(10s~20s)，因此被認為還是需要研究出怎麼用C/C++寫出頻譜圖，在`CH_AiSound`底下新增`news`資料夾代表新增測試程式
+* spectrogram.cpp : 利用先前的librosaCpp + gnuplot嘗試畫出spectrogram
+* spectrogram_with_fftw.cpp : 利用<fftw3>現成library實現STFT + gnuplot畫出spectrogram
+* sample.py : 原始轉換頻譜圖檔案
+* 有圖片比照
+* 結果: 雖然CPP非常難以近似python librosa的結果但是有達到非常類似的效果了。  
+
 ## denoise (start at 2024/6/30)
 Make use of `noisereduce` library to achieve denoise feature.
 
