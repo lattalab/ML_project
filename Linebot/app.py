@@ -54,7 +54,12 @@ def send_message(text):
         messages.append(TextSendMessage(text="該段音訊被判斷為合成語音"))
 
     for message in messages:
+<<<<<<< Updated upstream
         # 傳送訊息到指定用戶(add your user_id)
+=======
+        # 傳送訊息到指定用戶
+        # broadcast 推播給所有好友
+>>>>>>> Stashed changes
         line_bot_api.broadcast(message)
 
 @app.route("/callback", methods=['POST'])
