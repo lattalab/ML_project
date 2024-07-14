@@ -4,14 +4,14 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from linebot.models import AudioMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent, MessageAction
 import os
 from flask import Flask, request, abort, jsonify
-from P_model_7 import CNN_model7
-import torch
-import torch.nn as nn
-import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
-from observe_audio_function import load_audio, get_mel_spectrogram, plot_mel_spectrogram, envelope, normalize_audio, SAMPLE_RATE, AUDIO_LEN
-from observe_audio_function import denoise, process_audio
-from PIL import Image
+# from P_model_7 import CNN_model7
+# import torch
+# import torch.nn as nn
+# import torchvision.transforms as transforms
+# import matplotlib.pyplot as plt
+# from observe_audio_function import load_audio, get_mel_spectrogram, plot_mel_spectrogram, envelope, normalize_audio, SAMPLE_RATE, AUDIO_LEN
+# from observe_audio_function import denoise, process_audio
+# from PIL import Image
 
 app = Flask(__name__)
 
