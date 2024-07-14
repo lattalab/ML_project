@@ -1,9 +1,15 @@
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from linebot.models import AudioMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent
+from linebot.models import AudioMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent, MessageAction
 import os
 from flask import Flask, request, abort, jsonify
+from P_model_7 import CNN_model7
+import torch
+import torch.nn as nn
+import matplotlib.pyplot as plt
+from observe_audio_function import load_audio, get_mel_spectrogram, plot_mel_spectrogram, envelope, normalize_audio, SAMPLE_RATE, AUDIO_LEN
+from observe_audio_function import denoise, process_audio
 
 app = Flask(__name__)
 
@@ -99,12 +105,78 @@ def handle_audio_message(event):
         text='請選擇你要辨識的語言',
         actions=[
             PostbackAction(label='中文', data='language=chinese'),
-            PostbackAction(label='英文', data='language=english')
+            PostbackAction(label='英文', data='language=english'),
+            MessageAction(label='其他', text='抱歉! 目前不支援其他語言，請嘗試中英文語音。', data='language=other'),
         ]
     )
     # 送出這個樣板訊息
     template_message = TemplateSendMessage(alt_text='選擇語言', template=buttons_template)
+    # 回傳給後端伺服器知道
     line_bot_api.reply_message(event.reply_token, template_message)
+
+# 處理語言選擇後的事件
+@handler.add(PostbackEvent)
+def handle_postback(event):
+    # 知道使用者選到的語言
+    if event.postback.data.startswith('language='):
+        selected_language = event.postback.data.split('=')[1]
+        user_id = event.source.user_id
+
+        if user_id in user_audio_path and selected_language in ['chinese', 'english']:
+            audio_path = user_audio_path[user_id]
+            result_text = process_audio(audio_path, selected_language)
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=result_text)
+            )
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text='未找到對應的音檔，請重新上傳。')
+            )
+
+# 語音處理函數
+def process_audio(audio_path, language):
+    # 使用相應的模型判斷是否為合成語音
+    is_synthetic = check_synthetic_audio(audio_path, language)
+    return f"語言: {language}, 懷疑 {'是' if is_synthetic else '不是'} 合成語音"
+
+# 判斷是否為合成語音的函數
+def check_synthetic_audio(audio_path, language):
+    # 根據語言選擇相應的模型
+    if language == 'chinese':
+        pass
+        #model = load_model('chinese_synthetic_model')
+    elif language == 'english':
+        model = CNN_model7()    # 建立模型物件
+        # 加載權重檔案
+        weights_path = 'model_en.pth'
+        model.load_state_dict(torch.load(weights_path))
+
+        # 將模型設置為評估模式
+        model.eval()
+    
+    # 音檔要先轉換成頻譜圖
+    
+    # 判斷是否為合成語音
+    #is_synthetic = model.predict(audio_path)
+    #return is_synthetic
+
+def spectrogram(audio_path):
+    audio, sr = load_audio(audio_path, sr=SAMPLE_RATE)
+    for i in range(0, len(audio), AUDIO_LEN):
+        audio = audio[i:i+AUDIO_LEN]
+        rn = denoise(audio, sr=SAMPLE_RATE) # 新增去雜音
+        spec = get_mel_spectrogram(rn)
+        fig = plot_mel_spectrogram(spec)
+        plt.title("Spectrogram", fontsize=17)
+        # Save the spectrogram image with a meaningful filename
+        filename = f"spec_{i/AUDIO_LEN}.png"  # Use single quotes inside the f-string
+        filepath = os.path.join('./', filename)
+        plt.savefig(filepath)
+
+        # Close the figure to free up resources
+        plt.close()
 
 if __name__ == "__main__":
     app.run(host='127.0.0.1', port=10000)
