@@ -123,7 +123,7 @@ import noisereduce as nr
 def denoise(audio, sr=SAMPLE_RATE):
     # 降噪處理
     # 藉由設置stationary=True，達成去雜音效果(不知是否有其他BUG)
-    reduced_noise = nr.reduce_noise(y=audio, sr=SAMPLE_RATE, stationary=True)
+    reduced_noise = nr.reduce_noise(y=audio, sr=SAMPLE_RATE, stationary=True, prop_decrease = 0.95, n_fft = N_FFT)
     return reduced_noise
 
 # 這邊不知道為什麼不能用，所以先註解掉

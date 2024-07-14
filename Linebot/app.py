@@ -7,9 +7,11 @@ from flask import Flask, request, abort, jsonify
 from P_model_7 import CNN_model7
 import torch
 import torch.nn as nn
+import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 from observe_audio_function import load_audio, get_mel_spectrogram, plot_mel_spectrogram, envelope, normalize_audio, SAMPLE_RATE, AUDIO_LEN
 from observe_audio_function import denoise, process_audio
+from PIL import Image
 
 app = Flask(__name__)
 
@@ -152,17 +154,19 @@ def check_synthetic_audio(audio_path, language):
         # 加載權重檔案
         weights_path = 'model_en.pth'
         model.load_state_dict(torch.load(weights_path))
-
+        # 測試GPU可不可用
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"Test on {device}.")
         # 將模型設置為評估模式
+        model.to(device)
         model.eval()
     
     # 音檔要先轉換成頻譜圖
-    
-    # 判斷是否為合成語音
-    #is_synthetic = model.predict(audio_path)
-    #return is_synthetic
+    spectrogram(audio_path)
+    return model
 
 def spectrogram(audio_path):
+    spec_paths = []     # 用來保存頻譜圖的路徑
     audio, sr = load_audio(audio_path, sr=SAMPLE_RATE)
     for i in range(0, len(audio), AUDIO_LEN):
         audio = audio[i:i+AUDIO_LEN]
@@ -174,9 +178,30 @@ def spectrogram(audio_path):
         filename = f"spec_{i/AUDIO_LEN}.png"  # Use single quotes inside the f-string
         filepath = os.path.join('./', filename)
         plt.savefig(filepath)
+        spec_paths.append(filepath)
 
         # Close the figure to free up resources
         plt.close()
+        return spec_paths
+
+# Function to predict using the model
+def predict(model, image_path):
+    transform = transforms.Compose([
+        transforms.Resize((128, 128)),  # Resize images to expected size
+        transforms.ToTensor()          # Convert images to PyTorch tensors
+    ])
+    image = Image.open(image_path).convert('RGB')
+    image = transform(image).unsqueeze(0)  # Add batch dimension
+
+    # Move image to GPU if available
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    image = image.to(device)
+
+    # Perform prediction
+    with torch.no_grad():
+        output = model(image)
+
+    return output
 
 if __name__ == "__main__":
     app.run(host='127.0.0.1', port=10000)
