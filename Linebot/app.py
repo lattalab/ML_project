@@ -1,9 +1,9 @@
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.models import AudioMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent
 import os
 from flask import Flask, request, abort, jsonify
-import re
 
 app = Flask(__name__)
 
@@ -54,12 +54,10 @@ def send_message(text):
         messages.append(TextSendMessage(text="該段音訊被判斷為合成語音"))
 
     for message in messages:
-<<<<<<< Updated upstream
         # 傳送訊息到指定用戶(add your user_id)
-=======
+
         # 傳送訊息到指定用戶
         # broadcast 推播給所有好友
->>>>>>> Stashed changes
         line_bot_api.broadcast(message)
 
 @app.route("/callback", methods=['POST'])
@@ -78,6 +76,35 @@ def callback():
         abort(400)
 
     return 'OK'
+
+# 暫存使用者音檔路徑的字典
+user_audio_path = {}
+
+# 處理語音訊息事件
+@handler.add(MessageEvent, message=AudioMessage)
+def handle_audio_message(event):
+    audio_message_content = line_bot_api.get_message_content(event.message.id)
+    audio_path = f'audio_{event.source.user_id}.mp3'
+    # 保存音檔
+    with open(audio_path, 'wb') as fd:
+        for chunk in audio_message_content.iter_content():
+            fd.write(chunk)
+    
+    # 保存音檔路徑到暫存字典
+    user_audio_path[event.source.user_id] = audio_path
+
+    # 回覆選擇語言的按鈕
+    buttons_template = ButtonsTemplate(
+        title='選擇語言',
+        text='請選擇你要辨識的語言',
+        actions=[
+            PostbackAction(label='中文', data='language=chinese'),
+            PostbackAction(label='英文', data='language=english')
+        ]
+    )
+    # 送出這個樣板訊息
+    template_message = TemplateSendMessage(alt_text='選擇語言', template=buttons_template)
+    line_bot_api.reply_message(event.reply_token, template_message)
 
 if __name__ == "__main__":
     app.run(host='127.0.0.1', port=10000)
