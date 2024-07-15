@@ -4,14 +4,15 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from linebot.models import AudioMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent, MessageAction
 import os
 from flask import Flask, request, abort, jsonify
-from P_model_7 import CNN_model7
-import torch
-import torch.nn as nn
-import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
-from observe_audio_function import load_audio, get_mel_spectrogram, plot_mel_spectrogram, envelope, normalize_audio, SAMPLE_RATE, AUDIO_LEN
-from observe_audio_function import denoise, process_audio
-from PIL import Image
+import subprocess
+# from P_model_7 import CNN_model7
+# import torch
+# import torch.nn as nn
+# import torchvision.transforms as transforms
+# import matplotlib.pyplot as plt
+# from observe_audio_function import load_audio, get_mel_spectrogram, plot_mel_spectrogram, envelope, normalize_audio, SAMPLE_RATE, AUDIO_LEN
+# from observe_audio_function import denoise, process_audio
+# from PIL import Image
 
 app = Flask(__name__)
 
@@ -85,22 +86,17 @@ def callback():
 
     return 'OK'
 
-# 暫存使用者音檔路徑的字典
-user_audio_path = {}
+# 暫存使用者音檔的字典 , map user_id to audio_data
+user_audio_data = {} 
 
 # 處理語音訊息事件
 @handler.add(MessageEvent, message=AudioMessage)
 def handle_audio_message(event):
+    # 得到音檔內容
     audio_message_content = line_bot_api.get_message_content(event.message.id)
-    audio_path = f'audio_{event.source.user_id}.mp3'
-    # 保存音檔
-    with open(audio_path, 'wb') as fd:
-        for chunk in audio_message_content.iter_content():
-            fd.write(chunk)
-    
-    # 保存音檔路徑到暫存字典
-    user_audio_path[event.source.user_id] = audio_path
-
+    # 紀錄音檔內容
+    user_audio_data[event.source.user_id] = audio_message_content.content
+    subprocess.run(['python', 'hello.py'])
     # 回覆選擇語言的按鈕
     buttons_template = ButtonsTemplate(
         title='選擇語言',
@@ -124,12 +120,12 @@ def handle_postback(event):
         selected_language = event.postback.data.split('=')[1]
         user_id = event.source.user_id
 
-        if user_id in user_audio_path and selected_language in ['chinese', 'english']:
-            audio_path = user_audio_path[user_id]
-            result_text = process_audio(audio_path, selected_language)
+        if user_id in user_audio_data and selected_language in ['chinese', 'english']:
+            audio_path = user_audio_data[user_id]
+            #result_text = process_audio(audio_path, selected_language)
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text=result_text)
+                TextSendMessage(text='123')
             )
         else:
             line_bot_api.reply_message(
@@ -137,71 +133,71 @@ def handle_postback(event):
                 TextSendMessage(text='未找到對應的音檔，請重新上傳。')
             )
 
-# 語音處理函數
-def process_audio(audio_path, language):
-    # 使用相應的模型判斷是否為合成語音
-    is_synthetic = check_synthetic_audio(audio_path, language)
-    return f"語言: {language}, 懷疑 {'是' if is_synthetic else '不是'} 合成語音"
+# # 語音處理函數
+# def process_audio(audio_path, language):
+#     # 使用相應的模型判斷是否為合成語音
+#     is_synthetic = check_synthetic_audio(audio_path, language)
+#     return f"語言: {language}, 懷疑 {'是' if is_synthetic else '不是'} 合成語音"
 
-# 判斷是否為合成語音的函數
-def check_synthetic_audio(audio_path, language):
-    # 根據語言選擇相應的模型
-    if language == 'chinese':
-        pass
-        #model = load_model('chinese_synthetic_model')
-    elif language == 'english':
-        model = CNN_model7()    # 建立模型物件
-        # 加載權重檔案
-        weights_path = 'model_en.pth'
-        model.load_state_dict(torch.load(weights_path))
-        # 測試GPU可不可用
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"Test on {device}.")
-        # 將模型設置為評估模式
-        model.to(device)
-        model.eval()
+# # 判斷是否為合成語音的函數
+# def check_synthetic_audio(audio_path, language):
+#     # 根據語言選擇相應的模型
+#     if language == 'chinese':
+#         pass
+#         #model = load_model('chinese_synthetic_model')
+#     elif language == 'english':
+#         model = CNN_model7()    # 建立模型物件
+#         # 加載權重檔案
+#         weights_path = 'model_en.pth'
+#         model.load_state_dict(torch.load(weights_path))
+#         # 測試GPU可不可用
+#         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#         print(f"Test on {device}.")
+#         # 將模型設置為評估模式
+#         model.to(device)
+#         model.eval()
     
-    # 音檔要先轉換成頻譜圖
-    spectrogram(audio_path)
-    return model
+#     # 音檔要先轉換成頻譜圖
+#     spectrogram(audio_path)
+#     return model
 
-def spectrogram(audio_path):
-    spec_paths = []     # 用來保存頻譜圖的路徑
-    audio, sr = load_audio(audio_path, sr=SAMPLE_RATE)
-    for i in range(0, len(audio), AUDIO_LEN):
-        audio = audio[i:i+AUDIO_LEN]
-        rn = denoise(audio, sr=SAMPLE_RATE) # 新增去雜音
-        spec = get_mel_spectrogram(rn)
-        fig = plot_mel_spectrogram(spec)
-        plt.title("Spectrogram", fontsize=17)
-        # Save the spectrogram image with a meaningful filename
-        filename = f"spec_{i/AUDIO_LEN}.png"  # Use single quotes inside the f-string
-        filepath = os.path.join('./', filename)
-        plt.savefig(filepath)
-        spec_paths.append(filepath)
+# def spectrogram(audio_path):
+#     spec_paths = []     # 用來保存頻譜圖的路徑
+#     audio, sr = load_audio(audio_path, sr=SAMPLE_RATE)
+#     for i in range(0, len(audio), AUDIO_LEN):
+#         audio = audio[i:i+AUDIO_LEN]
+#         rn = denoise(audio, sr=SAMPLE_RATE) # 新增去雜音
+#         spec = get_mel_spectrogram(rn)
+#         fig = plot_mel_spectrogram(spec)
+#         plt.title("Spectrogram", fontsize=17)
+#         # Save the spectrogram image with a meaningful filename
+#         filename = f"spec_{i/AUDIO_LEN}.png"  # Use single quotes inside the f-string
+#         filepath = os.path.join('./', filename)
+#         plt.savefig(filepath)
+#         spec_paths.append(filepath)
 
-        # Close the figure to free up resources
-        plt.close()
-        return spec_paths
+#         # Close the figure to free up resources
+#         plt.close()
+#         return spec_paths
 
-# Function to predict using the model
-def predict(model, image_path):
-    transform = transforms.Compose([
-        transforms.Resize((128, 128)),  # Resize images to expected size
-        transforms.ToTensor()          # Convert images to PyTorch tensors
-    ])
-    image = Image.open(image_path).convert('RGB')
-    image = transform(image).unsqueeze(0)  # Add batch dimension
+# # Function to predict using the model
+# def predict(model, image_path):
+#     transform = transforms.Compose([
+#         transforms.Resize((128, 128)),  # Resize images to expected size
+#         transforms.ToTensor()          # Convert images to PyTorch tensors
+#     ])
+#     image = Image.open(image_path).convert('RGB')
+#     image = transform(image).unsqueeze(0)  # Add batch dimension
 
-    # Move image to GPU if available
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    image = image.to(device)
+#     # Move image to GPU if available
+#     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#     image = image.to(device)
 
-    # Perform prediction
-    with torch.no_grad():
-        output = model(image)
+#     # Perform prediction
+#     with torch.no_grad():
+#         output = model(image)
 
-    return output
+#     return output
 
 if __name__ == "__main__":
     app.run(host='127.0.0.1', port=10000)
