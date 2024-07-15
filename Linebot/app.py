@@ -108,7 +108,7 @@ def handle_audio_message(event):
     print(f'音檔已保存到{os.path.abspath(audio_path)}, user_id: {user_id}')
 
     import librosa
-    y , sr = librosa.load(audio_path, sr = 16000)
+    y , sr = librosa.load(os.path.abspath(audio_path), sr = 16000)
     print(y)
     print("df")
     
