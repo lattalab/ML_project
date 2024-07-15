@@ -108,9 +108,9 @@ def handle_audio_message(event):
     }
 
     # 寫入 JSON 檔案
-    json_filename = f'audio_data_{user_id}.json'
-    with open(json_filename, 'w') as json_file:
-        json.dump(json_data, json_file)
+    import requests
+    url = 'https://ml-project-1r0x.onrender.com/receive_audio'
+    response = requests.post(url, json=json_data)
     
     # 回覆選擇語言的按鈕
     buttons_template = ButtonsTemplate(
@@ -126,10 +126,6 @@ def handle_audio_message(event):
     template_message = TemplateSendMessage(alt_text='選擇語言', template=buttons_template)
     # 回傳給後端伺服器知道
     line_bot_api.reply_message(event.reply_token, template_message)
-
-@app.route('/audio_data', methods=['GET'])
-def display_audio_data():
-    return render_template('audio_data.html', audio_data=user_audio_data)
 
 # # 處理語言選擇後的事件
 # @handler.add(PostbackEvent)
