@@ -91,6 +91,7 @@ user_audio_path = {}
 
 # 處理語音訊息事件
 @handler.add(MessageEvent, message=AudioMessage)
+@app.route('/download', methods=['POST'])
 def handle_audio_message(event):
     # 得到音檔內容
     audio_message_content = line_bot_api.get_message_content(event.message.id)
@@ -102,10 +103,6 @@ def handle_audio_message(event):
     with open(audio_path, 'wb') as fd:
         for chunk in audio_message_content.iter_content():
             fd.write(chunk)
-
-    import librosa
-    y, sr = librosa.load(audio_path, sr=16000)
-    print(y, sr)
 
     # 保存音檔路徑到暫存字典
     user_audio_path[user_id] = audio_path
