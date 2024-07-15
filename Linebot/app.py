@@ -91,7 +91,6 @@ user_audio_path = {}
 
 # 處理語音訊息事件
 @handler.add(MessageEvent, message=AudioMessage)
-@app.route('/download', methods=['POST'])
 def handle_audio_message(event):
     # 得到音檔內容
     audio_message_content = line_bot_api.get_message_content(event.message.id)
@@ -106,6 +105,7 @@ def handle_audio_message(event):
 
     # 保存音檔路徑到暫存字典
     user_audio_path[user_id] = audio_path
+    print(f'音檔已保存到{audio_path}, user_id: {user_id}')
     
     # 回覆選擇語言的按鈕
     buttons_template = ButtonsTemplate(
