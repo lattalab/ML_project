@@ -3,7 +3,7 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from linebot.models import AudioMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent, MessageAction
 import os
-from flask import Flask, request, abort, jsonify
+from flask import Flask, request, abort, jsonify, send_from_directory
 import subprocess
 # from P_model_7 import CNN_model7
 # import torch
@@ -86,8 +86,8 @@ def callback():
 
     return 'OK'
 
-# 暫存使用者音檔的字典 , map user_id to audio_data
-user_audio_data = {} 
+# 暫存使用者音檔路徑的字典
+user_audio_path = {}
 
 # 處理語音訊息事件
 @handler.add(MessageEvent, message=AudioMessage)
@@ -95,8 +95,17 @@ def handle_audio_message(event):
     # 得到音檔內容
     audio_message_content = line_bot_api.get_message_content(event.message.id)
     # 紀錄音檔內容
-    user_audio_data[event.source.user_id] = audio_message_content.content
-    subprocess.run(['python', 'hello.py'])
+    user_id = event.source.user_id
+    audio_path = f'audio_{user_id}.mp3'
+
+    # 保存音檔到伺服器
+    with open(audio_path, 'wb') as fd:
+        for chunk in audio_message_content.iter_content():
+            fd.write(chunk)
+
+    # 保存音檔路徑到暫存字典
+    user_audio_path[user_id] = audio_path
+    
     # 回覆選擇語言的按鈕
     buttons_template = ButtonsTemplate(
         title='選擇語言',
@@ -120,8 +129,8 @@ def handle_postback(event):
         selected_language = event.postback.data.split('=')[1]
         user_id = event.source.user_id
 
-        if user_id in user_audio_data and selected_language in ['chinese', 'english']:
-            audio_path = user_audio_data[user_id]
+        if user_id in user_audio_path and selected_language in ['chinese', 'english']:
+            audio_path = user_audio_path[user_id]
             #result_text = process_audio(audio_path, selected_language)
             line_bot_api.reply_message(
                 event.reply_token,
@@ -132,6 +141,13 @@ def handle_postback(event):
                 event.reply_token,
                 TextSendMessage(text='未找到對應的音檔，請重新上傳。')
             )
+
+@app.route('/download_audio/<user_id>', methods=['GET'])
+def download_audio(user_id):
+    if user_id in user_audio_path:
+        return send_from_directory(directory='.', filename=user_audio_path[user_id], as_attachment=True)
+    else:
+        return "音檔不存在。", 404
 
 # # 語音處理函數
 # def process_audio(audio_path, language):
