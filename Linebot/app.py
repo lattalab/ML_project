@@ -103,12 +103,13 @@ def handle_audio_message(event):
         for chunk in audio_message_content.iter_content():
             fd.write(chunk)
 
+    import librosa
+    y, sr = librosa.load(audio_path, sr=16000)
+    print(y, sr)
+
     # 保存音檔路徑到暫存字典
     user_audio_path[user_id] = audio_path
     
-    # 使用 subprocess 呼叫 process_audio.py 並傳遞 audio_path 和 user_id
-    subprocess.run(['python', 'hello.py', audio_path, user_id])
-
     # 回覆選擇語言的按鈕
     buttons_template = ButtonsTemplate(
         title='選擇語言',
