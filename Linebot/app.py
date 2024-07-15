@@ -106,6 +106,11 @@ def handle_audio_message(event):
     # 保存音檔路徑到暫存字典
     user_audio_path[user_id] = audio_path
     print(f'音檔已保存到{os.path.abspath(audio_path)}, user_id: {user_id}')
+
+    import librosa
+    y , sr = librosa.load(audio_path, sr = 16000)
+    print(y)
+    print("df")
     
     # 回覆選擇語言的按鈕
     buttons_template = ButtonsTemplate(
