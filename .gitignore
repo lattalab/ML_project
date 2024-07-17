@@ -1,2 +1,4 @@
 # 忽略dataset
 dataset/*
+Linebot/detect/.env
+Linebot/detect/*.mp3

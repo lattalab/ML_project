@@ -137,7 +137,8 @@ def denoise(audio, sr=SAMPLE_RATE):
 #         LowShelfFilter(cutoff_frequency_hz=400, gain_db=10, q=1),  # 低架濾波器設置，200 Hz 以下降低 6 dB
 #         Gain(gain_db=10)  # 增加 3 dB 的增益
 #     ])
-
+    
 #     # Run the audio through this pedalboard!
 #     effected = board(audio, sr)
+
 #     return effected
