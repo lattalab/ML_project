@@ -19,13 +19,13 @@ currently developed on `PA` dataset.
 3. 找到屬於LineBot的CHANNEL_ACCESS_TOKEN 跟 CHANNEL_SECRET 及 USER_ID
 4. 可以在Line Developement做簡單的reply功能
 
-i. 準備好.py檔 (用來執行複雜的/rate 跟 匯率換算)  
+i. 準備好.py檔 (跑你想要的做的事情)  
 ii. 上傳到Github  
 iii. 使用Render做為雲端用來佈署  
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
 
-render.yaml 包含部署到 Render 需要的資訊，像是範例程式如何 build、如何啟動。  (套別人的github模板)
+render.yaml 包含部署到 Render 需要的資訊，像是範例程式如何 build、如何啟動。  (套別人的github模板)  
 requirements.txt 程式所需要的套件集  
 Build Command:./build.sh  (會執行build.sh的功能)  
 
@@ -40,6 +40,24 @@ Build Command:./build.sh  (會執行build.sh的功能)
 
 ![image](https://github.com/lattalab/ML_project/assets/91266449/5690c754-157d-48be-8c44-7fea073e252e)
 
+### update (2024/07/18)
+原本的Linbot資料夾會被部屬到render上，但之後想要新增線上判斷合成語音的功能，部屬到render上遇到瓶頸。  
+於是新增了`detect`資料夾，來重新開發。  
+* server.py: 在原本app.py的架構下進行額外開發，能夠對音檔(或影片音訊)判斷是否為合成語音
+* create_spectrogram.py : 將音檔轉換為Spectrogram (前處理的過程)
+* test_model.py : 轉換完spectrogram之後，送到模型上進行預測，預測完後會寫成一個csv檔(方便自己debug用、檢查數據用)
+* 其他資料: 模型架構、模型權重、測試音檔等相關檔案
+
+```
+使用ngrok來產生網址 --> ngrok http <your-server-IP>:<your-server-Port> in Anaconda
+run server.py at your compiler(ex: VSCode)
+Send message to your linebot
+```
+
+#### Result-2
+![image](https://github.com/user-attachments/assets/26b10796-7596-4bab-94bf-821818d9b925)
+![image](https://github.com/user-attachments/assets/c0303f44-0ded-40c8-876d-d627351480ce)
+
 ## CH_AiSound (2024/6/24)
 * spectrum.py & model.ipynb: 開始訓練分辨中文合成語音模型
 資料來自`CFAD`跟自行生成的語音(elevanlabs、TTSMAKER)
@@ -48,7 +66,8 @@ Build Command:./build.sh  (會執行build.sh的功能)
 * fake & real : 模型訓練時用到的頻譜圖
 
 ### Result
-vitis-ai可以跑python，暫定不需要研究C++轉成頻譜圖。
+vitis-ai可以跑python，~~暫定不需要研究C++轉成頻譜圖。~~   
+跑太慢了，還是要研究看看。  
 
 ### Update (2024/7/12)
 因為轉圖片的前處理太久(10s~20s)，因此被認為還是需要研究出怎麼用C/C++寫出頻譜圖，在`CH_AiSound`底下新增`news`資料夾代表新增測試程式
