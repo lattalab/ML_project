@@ -2,3 +2,7 @@
 dataset/*
 Linebot/detect/.env
 Linebot/detect/*.mp3
+Linebot/detect/client_secret.json
+Linebot/detect/audio/*
+Linebot/detect/spec/*
+Linebot/detect/split_audio/*
