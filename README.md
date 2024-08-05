@@ -77,6 +77,10 @@ vitis-ai可以跑python，~~暫定不需要研究C++轉成頻譜圖。~~
 * 有圖片比照
 * 結果: 雖然CPP非常難以近似python librosa的結果但是有達到非常類似的效果了。  
 
+### Update2 (2024/7/20)
+在`CH_AiSound/news/update2`底下加入新增檔案，主要內容為優化先前的C語言Spectrogram寫法，並寫了一些檔案做數據比對，最終結果可以直接比較圖，有達到非常近似的效果了。
+缺點: 相比原始python轉圖片檔案，沒有對音訊長度做剪裁、過濾掉強度較小的部分。
+
 ## denoise (start at 2024/6/30)
 Make use of `noisereduce` library to achieve denoise feature.
 
