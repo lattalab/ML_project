@@ -1,14 +1,17 @@
+# How to read?
+接下來會逐一解釋每個目錄在做甚麼，通常以列點式說明每個項目大概在什麼。
+- [ ] 最終版本
+
 ## Base directory
 Dataset: https://www.kaggle.com/datasets/awsaf49/asvpoof-2019-dataset
 
 currently developed on `PA` dataset.
 
-### code description (start at 2024/3/18)
+**code description (start at 2024/3/18)**
 1. transfer.py: 為資料集狀態描述生成一個csv
 2. mel-frequency.ipynb: 先分析資料集狀態，來決定要怎麼取資料，在轉換為頻譜圖
 3. model.ipynb: 開始訓練英文模型
-
-其餘檔案為模型權重檔以及頻譜圖範例。
+4. 其餘檔案為模型權重檔以及頻譜圖範例。
 
 ### Result
 希望準確率能達到九成，目前在eval資料集下的準確率表現是最好84%。
@@ -29,7 +32,7 @@ render.yaml 包含部署到 Render 需要的資訊，像是範例程式如何 bu
 requirements.txt 程式所需要的套件集  
 Build Command:./build.sh  (會執行build.sh的功能)  
 
-### 設計理念
+**設計理念**
 把這個當作專題當中vitis-ai的後處理。 (目前算完成)
 由client.cpp or client.py 上傳資料到指定網站上，在啟動Linebot警告功能。(但不是最終vitis-ai的執行檔)
 
@@ -58,6 +61,15 @@ Send message to your linebot
 ![image](https://github.com/user-attachments/assets/26b10796-7596-4bab-94bf-821818d9b925)
 ![image](https://github.com/user-attachments/assets/c0303f44-0ded-40c8-876d-d627351480ce)
 
+### update-3 - 0806
+先前說到能讓Linebot判斷合成語音，更新了:  
+* 優化前處理過程
+* 優化效能，採用了一些平行處理的方式，讓文本分析跟判斷合成語音過程可以同時做
+* 優化介面，會詢問使用者意見，根據使用者所選的選項進行動作  
+![image](https://github.com/user-attachments/assets/91c5519f-6ec6-47af-a670-eb377d71162c)  
+* 使用`Gemini API`結合文本分析，使用者能選擇是否要判斷合成語音中的文本內容  
+![image](https://github.com/user-attachments/assets/5b868fd6-b1ec-4f47-b0b8-dde92c2d6072)  
+
 ## CH_AiSound (2024/6/24)
 * spectrum.py & model.ipynb: 開始訓練分辨中文合成語音模型
 資料來自`CFAD`跟自行生成的語音(elevanlabs、TTSMAKER)
@@ -78,7 +90,7 @@ vitis-ai可以跑python，~~暫定不需要研究C++轉成頻譜圖。~~
 * 結果: 雖然CPP非常難以近似python librosa的結果但是有達到非常類似的效果了。  
 
 ### Update2 (2024/7/20)
-在`CH_AiSound/news/update2`底下加入新增檔案，主要內容為優化先前的C語言Spectrogram寫法，並寫了一些檔案做數據比對，最終結果可以直接比較圖，有達到非常近似的效果了。
+在`CH_AiSound/news/update2`底下加入新增檔案，主要內容為優化先前的C語言Spectrogram寫法，並寫了一些檔案做數據比對，最終結果可以直接比較圖，有達到非常近似的效果了。  
 缺點: 相比原始python轉圖片檔案，沒有對音訊長度做剪裁、過濾掉強度較小的部分。
 
 ## denoise (start at 2024/6/30)
@@ -90,3 +102,9 @@ Further:
 
 ### Result
 暫定用noisereduce去雜音效果不錯，其他問題會影響模型再來調適。  
+
+## analysis (2024/8/6)
+* process_audio.ipynb: 對三種目前常用的訓練特徵(MFCC、Chroma、Mel-spectrogram)進行分析畫分布圖  
+* other_method.ipynb : 考慮其他可能用到的聲音特徵，依樣進行分析畫分布圖  
+* t_test.ipynb : 用t檢定比較 合成語音跟真實語音在某特定特徵下分布差異 (平均是否相同)  
+* scatter.ipynb: 將高維特徵進行降維畫散佈圖，看是否能找出差異  
