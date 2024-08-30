@@ -1,42 +1,41 @@
 '''
-Compare to P-model_6,
-deleting dropout function
-transforms.ToTensor() will divide 255 to do normalization
+1. Use crop_with_points to remove margin
+2. input mel_spec image ,and use RGB pixel value as input feature
 '''
 from PIL import Image
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
-import torchvision.transforms as transforms
+from torchvision import  transforms
 
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
 
 import os
-# from torchsummary import summary
+from torchsummary import summary
 import time
 # Hyper Parameters
-LR = 0.01
-batch_size_train = 200
-batch_size_valid = 200
-# n_iters = 10000
-NUM_EPOCHS = 30
+LR = 0.001
+batch_size_train = 50
+batch_size_valid = 50
+NUM_EPOCHS = 25
 
 IMAGE_SIZE = 128
 transform = transforms.Compose([
         transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)), # Original Size: (640, 480)
         transforms.ToTensor()
     ])
-    
+
+
+
+# 移除圖片周圍空白處
 def crop_with_points(image_path):
-    points = [(79, 57), (575, 428), (575, 57), (79, 426)]
+    points = [(79, 57), (575, 428), (575, 57), (79, 428)]
     # Load the image
     img = Image.open(image_path)
-    
+    # original shape is 640*480
     # Define the four points
     x1, y1 = points[0]
     x2, y2 = points[1]
@@ -49,47 +48,33 @@ def crop_with_points(image_path):
     right = max(x2, x3)
     lower = max(y3, y4)
     # Crop the image
-    cropped_img = img.crop((left, upper, right, lower))
-
+    cropped_img = img.crop((left, upper, right, lower)) # 79, 57, 575, 428
+	# After cropping, shape is 496*369
     return cropped_img
-    
-# 設定dataset，包含設定transformer、分成70% / 30%，圖片轉換處理完直接存到list，(沒有做成pytorch中的dataset)
-def generate_dataset(image_folder_path,  df, batch_size = 20, train_or_valid = True):
+
+# when training, do data augmentation on spoof data
+def generate_dataset(image_folder_path, batch_size=20, train_or_valid=True):
     image_paths = [os.path.join(image_folder_path, filename) for filename in os.listdir(image_folder_path)]
 
     # Load Labels
-    # Assuming 'train_df' has columns 'filename' and 'target'
-    # skip the "spec_" and ".png"
-    labels = [df[df["filename"] == os.path.basename(path)[5:-4]]["target"].values[0] for path in image_paths]
+    # spoof is 1, bonafide is 0, see teh first character
+    labels = [1 if filename[0] == "s" else 0 for filename in os.listdir(image_folder_path)]
     
     # Apply Transformations
-    # get the cropped image
-    # Convert the NumPy array back to an image
-    images = [transform(crop_with_points(path).convert('RGB')) for path in image_paths]
-    # images = [transform(Image.open(path).convert('RGB')) for path in image_paths]
-
+    images = [transform(crop_with_points(path).convert('RGB'))  for path in image_paths]
+    
     # Create TensorDataset
     dataset = torch.utils.data.TensorDataset(torch.stack(images), torch.tensor(labels, dtype=torch.long))
-
-    # Define Train and Validation Sizes
-    #train_size = int(0.7 * len(train_data))
-    #valid_size = len(train_data) - train_size
-
-    # Set random seed
-    #torch.manual_seed(42)
-
-    # Split into train and validation sets
-    #train_dataset, valid_dataset = torch.utils.data.random_split(train_data, [train_size, valid_size])
 
     # Create DataLoader for train and validation sets
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=train_or_valid, pin_memory=True)
 
     return data_loader
-
+    
 # define CNN model
-class CNN_model7(nn.Module):
+class CNN_model9(nn.Module):
     def __init__(self):
-        super(CNN_model7, self).__init__()
+        super(CNN_model9, self).__init__()
         self.input_layers = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(3, 8, 5, stride=1), # kernel = 5*5
@@ -99,7 +84,7 @@ class CNN_model7(nn.Module):
             )
         ])
         
-        conv_filters = [12,30,16,8] # [12,16,12,8]
+        conv_filters = [12,30,16,8] 
         self.conv_layers = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(8, 12, 1),
@@ -144,12 +129,12 @@ class CNN_model7(nn.Module):
         x = x.view(-1, 8*2*2)
         for layer in self.class_layers:
             x = layer(x)
-        return x
-  
+        return x  
+
 # 訓練模型
 def training(model):
     # 把結果寫入檔案
-    file = open("Training_detail/training_detail_model7.txt", "w")
+    file = open("training_result/training_detail_model9_CH.txt", "w")
     # 紀錄最大驗證集準確率
     max_accuracy = 0
 
@@ -231,7 +216,7 @@ def training(model):
             max_accuracy = accuracy_valid
             save_parameters = True
             if save_parameters:
-                path = '../../../float/model_7.pth'
+                path = 'training_result/model_9_CH_ver1.pth'
                 torch.save(model.state_dict(), path)
                 print(f"====Save parameters in {path}====")
                 file.write(f"====Save parameters in {path}====\n")
@@ -260,13 +245,13 @@ def training(model):
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.legend(loc='lower right')
-    plt.savefig("ROC/ROC7.png") 
+    plt.savefig("training_result/CH_ROC9.png") 
 
     # confusion_matrix
-    #plt.figure()
-    #cm = confusion_matrix(all_label, all_pred)
-    #sns.heatmap(cm, annot=True)
-    #plt.savefig("Confusion_matrix/Confusion_matrix6.png") 
+    plt.figure()
+    cm = confusion_matrix(all_label, all_pred)
+    sns.heatmap(cm, annot=True)
+    plt.savefig("training_result/CH_Confusion_matrix9.png") 
 
 def plt_loss_accuracy_fig(Total_training_loss, Total_validation_loss, Total_training_accuracy, Total_validation_accuracy):
     # visualization the loss and accuracy
@@ -277,7 +262,7 @@ def plt_loss_accuracy_fig(Total_training_loss, Total_validation_loss, Total_trai
     plt.xlabel('No. of epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig("Loss/Loss7.png") 
+    plt.savefig("training_result/CH_Loss9.png") 
 
     plt.figure()
     plt.plot(range(NUM_EPOCHS), Total_training_accuracy, 'r-', label='Training_accuracy')
@@ -286,7 +271,7 @@ def plt_loss_accuracy_fig(Total_training_loss, Total_validation_loss, Total_trai
     plt.xlabel('No. of epochs')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.savefig("Accuracy/Accuracy7.png") 
+    plt.savefig("training_result/CH_Accuracy9.png") 
 
 
 # Start training
@@ -295,31 +280,32 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Train on {device}.")
     
-    # 讀取LA_train_info
-    train_df = pd.read_csv("ASV_spoof2019/train_info.csv")
-    
-    #train_dataloader, valid_dataloader = get_train_test_dataloader(image_folder_path)
+    # set up a model , turn model into cuda
+    model = CNN_model9().to(device)
+    # load P_model7 pth
+    # pth_path = '/workspace/model_zoo/model_API2_model7/float/model_7.pth'
+    # state_dict = torch.load(pth_path)
+    # model.load_state_dict(state_dict)
+    # print(f"Load model pth from {pth_path}")
+    # Load Images from a Folder
+    image_folder_path = r"D:\clone_audio\chinese_audio_dataset_ver3\train_mel_spec"
+    print(f"Loading train data from {image_folder_path}...")
+    train_dataloader = generate_dataset(image_folder_path, batch_size = batch_size_train, train_or_valid = True)
     
     # Load Images from a Folder
-    image_folder_path = "../../../data/My_dataset/train_spec_LATrain_audio_shuffle23_NOT_preprocessing"
-    print(f"Loaded data from {image_folder_path}...")
-    train_dataloader = generate_dataset(image_folder_path, train_df, batch_size = batch_size_train, train_or_valid = True)
-    # Load Images from a Folder
-    image_folder_path = "../../../data/My_dataset/valid_spec_LATrain_audio_shuffle4_NOT_preprocessing"
-    print(f"Loaded data from {image_folder_path}...")
-    valid_dataloader = generate_dataset(image_folder_path, train_df, batch_size = batch_size_valid, train_or_valid = False)
-    
+    image_folder_path = r"D:\clone_audio\chinese_audio_dataset_ver3\val_mel_spec"
+    print(f"Loading validation data from {image_folder_path}...")
+    valid_dataloader = generate_dataset(image_folder_path, batch_size = batch_size_valid, train_or_valid = False)
     print(f"Finish loading all the data.")
     
-    # set up a model , turn model into cuda
-    model = CNN_model7().to(device)
-
+    
+    
     # set loss function
     criterion = nn.CrossEntropyLoss()
     # set optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=LR, betas=(0.9, 0.999))
     # Print the model summary
-    # summary(model, (3, IMAGE_SIZE, IMAGE_SIZE)) # Input size: (channels, height, width)
+    summary(model, (3, IMAGE_SIZE, IMAGE_SIZE)) # Input size: (channels, height, width)
     
     # 初始時間
     start_time = time.time()
@@ -340,4 +326,5 @@ if __name__ == "__main__":
 
     # save the fig of the loss and accuracy
     plt_loss_accuracy_fig(Total_training_loss, Total_validation_loss, Total_training_accuracy, Total_validation_accuracy)
+    
     

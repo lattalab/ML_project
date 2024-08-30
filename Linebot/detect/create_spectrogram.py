@@ -86,15 +86,16 @@ def process_audio_file(filepath):
         end_sample = start_sample + AUDIO_LEN
         audio_segment = audio_trimmed[start_sample:end_sample]
 
-        # padding to 5 seconds
+        # pad the audio with the original audio or cut the audio
         if len(audio_segment) < AUDIO_LEN:
-            # padding 方式待確認
-            audio_segment = random_padding(audio_segment, sr=SAMPLE_RATE)
+            length_audio = len(audio_segment)
+            repeat_count = (AUDIO_LEN + length_audio - 1) // length_audio  # Calculate the `ceiling` of AUDIO_LEN / length_audio
+            audio = np.tile(audio_segment, repeat_count)[:AUDIO_LEN]  # Repeat and cut to the required length
         else:
-            audio_segment = audio_segment[:AUDIO_LEN]
+            audio = audio[:AUDIO_LEN]
 
         # Generate the mel spectrogram
-        spec = librosa.feature.melspectrogram(y=audio_segment, sr=SAMPLE_RATE, fmax=FMAX, n_mels=N_MELS, hop_length=HOP_LEN, n_fft=N_FFT)
+        spec = librosa.feature.melspectrogram(y=audio, sr=SAMPLE_RATE, fmax=FMAX, n_mels=N_MELS, hop_length=HOP_LEN, n_fft=N_FFT)
         spec = librosa.power_to_db(spec)
 
         # Plot the mel spectrogram
@@ -119,6 +120,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     os.makedirs(destination_folder, exist_ok=True)  # 存放spectrogram的資料夾
+
+    print("Remove old images...")
+    for i in os.listdir(destination_folder):    # 刪除舊的圖片
+        i_path = os.path.join(destination_folder, i)
+        os.remove(i_path)
 
     filename = sys.argv[1]
     print("image filename:", filename)

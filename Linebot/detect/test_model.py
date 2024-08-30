@@ -1,4 +1,5 @@
-from P_model_7 import CNN_model7, crop_with_points, transform
+from P_model_13_ENG import CNN_model13, crop_with_points, transform
+from P_model_9_CH import CNN_model9
 import torch
 import torch.nn as nn
 import numpy as np
@@ -34,7 +35,7 @@ def data_for_model(image_folder_path):
 
     return data_loader
 
-def test_model(model, test_dataloader):
+def test_model(model, test_dataloader, device):
     model.eval()
     with torch.no_grad():
         for _, (image, label) in enumerate(test_dataloader):
@@ -58,12 +59,16 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Test on {device}.")
 
-    model = CNN_model7()    # define model
-    model.to(device)
+    model = None
     # load model depend on language
     if language == "english":
-        state_dict = torch.load('./model_en.pth')
+        model = CNN_model13()    # define model
+        state_dict = torch.load('./model_13_ENG_ver1.pth')
+    else:
+        model = CNN_model9()    # define model
+        state_dict = torch.load('./model_9_CH_ver1.pth')
     
+    model.to(device)
     model.load_state_dict(state_dict)
 
     # add marks to print the layer data info
@@ -80,7 +85,7 @@ if __name__ == "__main__":
     print(f"Loaded test data from {image_folder_path}.")
 
     print("Testing...")
-    test_model(model, test_dataloader)
+    test_model(model, test_dataloader, device)
     
     # turn dict1 into csv file
     output_df = pd.DataFrame(dict1)

@@ -7,7 +7,7 @@ import IPython.display as ipd
 import noisereduce as nr
 
 # Audio params
-SAMPLE_RATE = 22050  # (samples/sec)
+SAMPLE_RATE = 96000  # (samples/sec)
 DURATION = 5.0  # duration in second (sec)
 AUDIO_LEN = int(SAMPLE_RATE * DURATION)  # total number of samples in DURATION
 

@@ -13,7 +13,8 @@ import google.generativeai as genai # use gemini
 import speech_recognition as sr # speech recognition
 from pydub import AudioSegment  # audio processing
 from pydub.utils import make_chunks  # split audio
-from re import findall  # find url pattern
+import pathlib  # path (Read audio file and send to Gemini)
+
 # downloading youtube audio
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
@@ -26,15 +27,8 @@ from linebot.v3.messaging import (  # loading animation
     ) 
 import asyncio  # async function
 
-# 不知道先載完library有沒有比較快 (感覺有)
-import matplotlib.pyplot as plt
-import librosa
-import noisereduce as nr
-import numpy as np
-import time
-import torch
-import torch.nn as nn
-import sys
+# 預先載入library (因為感覺這樣比較快)
+from wrapFuncForDL import Save_mel, Get_Predict
 
 app = Flask(__name__)
 load_dotenv()   # 引入環境變數
@@ -131,6 +125,10 @@ def handle_audio_message(event):
     audio_name = f'audio_{user_id}.wav'
     audio_path = os.path.join(source_folder, audio_name)
 
+    for i in os.listdir(source_folder):    # 刪除舊的音檔
+        i_path = os.path.join(source_folder, i)
+        os.remove(i_path)
+
     # 保存音檔
     with open(audio_path, 'wb') as fd:
         for chunk in audio_message_content.iter_content():
@@ -193,13 +191,17 @@ def handle_postback(event):
         selected_language = data.split('=')[1]  # 獲取選擇的語言
         filename = os.path.split(audio_path)[1]  # 得到檔案名稱
 
-        # 開始處理音頻
-        process_thread = threading.Thread(target=process_audio, args=(user_id, selected_language, filename))
-        process_thread.start()
-        print("Start to process audio to detect AI Generated Sound!!!")
 
         # 同時詢問是否要繼續執行文本分析
         send_analysis_selection(user_id, selected_language)
+
+        # 開始處理音頻
+        # process_thread = threading.Thread(target=process_audio, args=(user_id, selected_language, filename))
+        # process_thread.setDaemon(True)
+        # process_thread.start()
+        process_audio(user_id, selected_language, filename)
+        print("Start to process audio to detect AI Generated Sound!!!")
+
     elif data.startswith('action='):    # 獲取是否執行文本分析的選項
         asyncio.run(waiting_animation(user_id=user_id))    # 顯示等待動畫
         # 切割data
@@ -207,8 +209,10 @@ def handle_postback(event):
         language = data.split('&')[1].split('=')[1]
         if action == 'yes': # 需要執行文本分析
             # 開啟新線程來進行文本分析
-            analysis_thread = threading.Thread(target=scam_analyze, args=(user_id, audio_path, language))
-            analysis_thread.start()
+            # analysis_thread = threading.Thread(target=scam_analyze, args=(user_id, audio_path, language))
+            # analysis_thread.setDaemon(True)
+            # analysis_thread.start()
+            scam_analyze(user_id, audio_path, language)
             print("Start to analyze the text content for scam!!!")
         elif action == 'no':    # 不執行文本分析
             print("不執行文本分析")
@@ -217,9 +221,13 @@ def handle_postback(event):
 # 語音處理函數
 def process_audio(user_id, language, filename):
     # 先轉成Spectrogram
-    subprocess.run(['python', 'create_spectrogram.py', filename])
+    # subprocess.run(['python', 'create_spectrogram.py', filename])
+    Save_mel(filename)
+
     # 使用相應的模型判斷是否為合成語音
-    subprocess.run(['python', 'test_model.py', language])
+    # subprocess.run(['python', 'test_model.py', language])
+    Get_Predict(language)
+    
     # 讀取結果 (1: spoof , 0: bonafide) (來自csv檔的結果)
     print("讀取結果中:")
     csv_file_path = f"output_model.csv" # 因為被儲存在當前路徑下
@@ -239,33 +247,34 @@ def scam_analyze(user_id, audio_path, selected_language, speech=True, msg=""):
     lang = {'chinese': 'zh-TW', 'english': 'en-US'} # 語言參數給speech recognition
     text = ""  # 要送入模型判斷的文本
 
-    if speech:  # 是語音檔
-        #轉檔
-        AudioSegment.converter = './ffmpeg/ffmpeg/bin/ffmpeg.exe'
-        # 切割音檔
-        chunk_files = split_audio(path)
+    # 因為發現有更好用的方法，因此不再使用這個方法
+    # if speech:  # 是語音檔
+    #     #轉檔
+    #     AudioSegment.converter = './ffmpeg/ffmpeg/bin/ffmpeg.exe'
+    #     # 切割音檔
+    #     chunk_files = split_audio(path)
 
-        #辨識
-        r = sr.Recognizer()
-        count =0
-        for path_i in chunk_files:  # 逐一辨識
-            with sr.AudioFile(path_i) as source:
-                audio = r.record(source)
-            try:
-                text += r.recognize_google(audio, language=lang[selected_language])
-            except:    # 有時候語音太模糊會無法辨識
-                count += 1
-                pass
+    #     #辨識
+    #     r = sr.Recognizer()
+    #     count =0
+    #     for path_i in chunk_files:  # 逐一辨識
+    #         with sr.AudioFile(path_i) as source:
+    #             audio = r.record(source)
+    #         try:
+    #             text += r.recognize_google(audio, language=lang[selected_language])
+    #         except:    # 有時候語音太模糊會無法辨識
+    #             count += 1
+    #             pass
 
-        if count >= len(chunk_files)/2: # 無法辨識超過太多，視為錯誤
-            text = "發生了錯誤，無法辨識"
-            line_bot_api.push_message(
-                    user_id,
-                    TextSendMessage(text=text)
-                )
-            return
-    else:   # 是文字檔
-        text = msg
+    #     if count >= len(chunk_files)/2: # 無法辨識超過太多，視為錯誤
+    #         text = "發生了錯誤，無法辨識"
+    #         line_bot_api.push_message(
+    #                 user_id,
+    #                 TextSendMessage(text=text)
+    #             )
+    #         return
+    # else:   # 是文字檔
+    #     text = msg
 
     # Access your API key as an environment variable.
     genai.configure(api_key=gemini)
@@ -280,9 +289,18 @@ def scam_analyze(user_id, audio_path, selected_language, speech=True, msg=""):
     Please ensure that the response follows the specified structure for ease of parsing and integration with the application.
     You need to reply in Traditional Chinese in default.
     input text: """ + text
+    if speech:  # 語音檔
+        # Generate content based on the prompt.
+        response = model.generate_content([
+            prompt,
+            {
+            "mime_type": "audio/wav",
+            "data": pathlib.Path(audio_path).read_bytes()
+            }
+        ])
+    else:   # 文字檔
+        response = model.generate_content([prompt + msg])
 
-    # Generate content based on the prompt.
-    response = model.generate_content(prompt)
     line_bot_api.push_message(
                 user_id,
                 TextSendMessage(text=response.text)
@@ -291,8 +309,6 @@ def scam_analyze(user_id, audio_path, selected_language, speech=True, msg=""):
 # 處理網址語音事件 (eg: youtube)
 @handler.add(MessageEvent, message=TextMessage)
 def handle_url(event):
-    # 顯示動畫
-    asyncio.run(waiting_animation(user_id=event.source.user_id))
     # 得到訊息內容
     message_content = event.message.text
     if not(message_content.startswith("https")):    # 如果不是網址，則處理為文字
@@ -336,8 +352,8 @@ async def waiting_animation(user_id):
 
     async_api_client = AsyncApiClient(configuration)
     line_bot_api = AsyncMessagingApi(async_api_client)
-    # loading second default is 30
-    await line_bot_api.show_loading_animation(ShowLoadingAnimationRequest(chatId=user_id, loadingSeconds=30))
+    # loading second default is 5
+    await line_bot_api.show_loading_animation(ShowLoadingAnimationRequest(chatId=user_id, loadingSeconds=5))
 
 if __name__ == "__main__":
     # 忽略叫你用linebot.v3的警告。  
