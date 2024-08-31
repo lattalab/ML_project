@@ -213,7 +213,7 @@ std::vector<std::vector<float>> get_mel_spectrogram(const std::vector<float>& au
     GstFFTF32 *fft = gst_fft_f32_new(fft_size, FALSE);
 
     // Prepare Mel spectrogram container
-    std::vector<std::vector<float>> mel_spec(N_MELS, std::vector<float>(SPEC_WIDTH, 0.0));
+    std::vector<std::vector<float>> mel_spec(N_MELS, std::vector<float>(SPEC_WIDTH, 0.0f));
     std::vector<std::vector<float>> mel_filter_bank = generate_mel_filter_bank(sr, fft_size, num_fft_bins, FMAX);
 
     // Calculate padding length if CENTER mode is enabled
@@ -237,7 +237,7 @@ std::vector<std::vector<float>> get_mel_spectrogram(const std::vector<float>& au
     std::vector<std::vector<double>> power_spectrum(1 + N_FFT / 2, std::vector<double>(SPEC_WIDTH, 0.0));
     
     for (size_t i = 0; i < SPEC_WIDTH; ++i) {
-        size_t start = i* HOP_LEN;
+        size_t start = i* HOP_LEN + N_FFT / 2;
         size_t end = start + fft_size;
         std::vector<float> segment(paddedSignal.begin() + start, paddedSignal.begin() + end);
 
