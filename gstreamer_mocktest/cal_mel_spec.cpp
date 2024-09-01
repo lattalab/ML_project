@@ -3,6 +3,7 @@
 #include <deque>
 #include <cmath>
 #include <fstream> // For file operations
+// #include <complex>
 
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
@@ -31,11 +32,13 @@ static std::deque<double> audio_buffer; // Buffer to store incoming audio sample
 // Global segment counter, starting from 1
 static int segment_count = 1;
 
-// Function to generate Hamming window
-void hamming_window(int window_Size, float* window) {
+// Function to generate Hanning window
+std::vector<float> hanning_window(int window_Size) {
+    std::vector<float> window(window_Size);
     for (int i = 0; i < window_Size; ++i) {
-        window[i] = 0.54 - 0.46 * cos(2 * M_PI * i / (window_Size - 1));
+        window[i] = 0.5 - 0.5 * cos(2.0f * M_PI * i / (window_Size - 1));
     }
+    return window;
 }
 
 // Function to apply Hamming window
@@ -141,149 +144,201 @@ void normalize(std::vector<std::vector<float>>& weights, const std::string& norm
 }
 
 // Function to create Mel filter-bank
-std::vector<std::vector<float>> generate_mel_filter_bank(float sample_rate, int n_fft, int n_mels, int fmax) {
-    
+// Function to generate Mel filter bank
+std::vector<std::vector<float>> generate_mel_filter_bank(int sr, int n_fft, int n_mels, float fmin, float fmax) {
     std::vector<std::vector<float>> mel_filter_bank(n_mels, std::vector<float>(n_fft / 2 + 1, 0.0f));
-    std::vector<double> fftfreqs = fft_frequencies(sample_rate, n_fft);
-    std::vector<double> mel_f = mel_frequencies(n_mels + 2, 0.0, fmax, false);
-    std::vector<double> fdiff(mel_f.size() - 1);
 
-    for (size_t i = 0; i < fdiff.size(); ++i) {
-        fdiff[i] = mel_f[i + 1] - mel_f[i];
+    // Compute mel points
+    std::vector<float> mel_points(n_mels + 2);
+    float mel_fmin = 2595.0f * std::log10(1.0f + fmin / 700.0f);
+    float mel_fmax = 2595.0f * std::log10(1.0f + fmax / 700.0f);
+
+    for (int i = 0; i < n_mels + 2; ++i) {
+        mel_points[i] = 700.0f * (std::pow(10.0f, (mel_fmin + (mel_fmax - mel_fmin) * i / (n_mels + 1)) / 2595.0f) - 1.0f);
     }
 
-    std::vector<std::vector<double>> ramps(n_mels + 2, std::vector<double>(fftfreqs.size()));
+    // Convert Hz to FFT bin numbers
+    std::vector<int> bin_points(n_mels + 2);
+    for (int i = 0; i < n_mels + 2; ++i) {
+        bin_points[i] = static_cast<int>(std::floor((n_fft + 1) * mel_points[i] / sr));
+    }
 
-    for (size_t i = 0; i < ramps.size(); ++i) {
-        for (size_t j = 0; j < fftfreqs.size(); ++j) {
-            ramps[i][j] = mel_f[i] - fftfreqs[j];
+    // Create filters
+    for (int i = 1; i <= n_mels; ++i) {
+        for (int j = bin_points[i - 1]; j < bin_points[i]; ++j) {
+            mel_filter_bank[i - 1][j] = (j - bin_points[i - 1]) / static_cast<float>(bin_points[i] - bin_points[i - 1]);
+        }
+        for (int j = bin_points[i]; j < bin_points[i + 1]; ++j) {
+            mel_filter_bank[i - 1][j] = (bin_points[i + 1] - j) / static_cast<float>(bin_points[i + 1] - bin_points[i]);
         }
     }
-
-    for (int i = 0; i < n_mels; ++i) {
-        for (size_t j = 0; j < fftfreqs.size(); ++j) {
-            double lower = -ramps[i][j] / fdiff[i];
-            double upper = ramps[i + 2][j] / fdiff[i + 1];
-            mel_filter_bank[i][j] = std::max(0.0, std::min(lower, upper));
-        }
-    }
-
-    // Normalize the filter bank
-    normalize(mel_filter_bank, "slaney");
 
     return mel_filter_bank;
 }
 
-
 ///////////////////////////////
 // Function to convert power spectrogram to dB scale
 // use global value as max to cal with top_db, this way can create a more correct picture
-std::vector<std::vector<float>> power_to_db(const std::vector<std::vector<float>>& power_spec, float amin = 1e-10, float top_db = 80.0) {
-    std::vector<std::vector<float>> db_spec(power_spec.size(), std::vector<float>(power_spec[0].size(), 0.f));
-    
-    float max_val = -std::numeric_limits<float>::infinity();;
+// Function to convert power spectrogram to dB scale
+std::vector<std::vector<float>> power_to_db(
+    const std::vector<std::vector<float>>& mel_spec, 
+    float ref = 1.0f, 
+    float amin = 1e-10f, 
+    float top_db = 80.0f
+) {
+    int num_frames = mel_spec.size();
+    int n_mels = mel_spec[0].size();
 
-    // Convert power to dB scale and find the max value
-    for (size_t i = 0; i < power_spec.size(); ++i) {
-        for (size_t j = 0; j < power_spec[i].size(); ++j) {
-            float magnitude_db = 10 * std::log10(std::max(power_spec[i][j], float(amin)));
-            db_spec[i][j] = magnitude_db;
-            if (db_spec[i][j] > max_val) {
-                max_val = db_spec[i][j];
+    std::vector<std::vector<float>> log_mel_spec(num_frames, std::vector<float>(n_mels));
+
+    float max_val = -std::numeric_limits<float>::infinity();
+
+    for (int i = 0; i < num_frames; ++i) {
+        for (int j = 0; j < n_mels; ++j) {
+            float value = std::max(mel_spec[i][j], amin);
+            float db = 10.0f * std::log10(value);
+            log_mel_spec[i][j] = db;
+            if (db > max_val) {
+                max_val = db;
             }
         }
     }
 
-    // Apply top_db threshold
-    float threshold = max_val - top_db;
-    for (size_t i = 0; i < db_spec.size(); ++i) {
-        for (size_t j = 0; j < db_spec[i].size(); ++j) {
-            db_spec[i][j] = std::max(db_spec[i][j], threshold);
+    float lower_bound = max_val - top_db;
+    for (int i = 0; i < num_frames; ++i) {
+        for (int j = 0; j < n_mels; ++j) {
+            log_mel_spec[i][j] = std::max(log_mel_spec[i][j], lower_bound);
         }
     }
 
-    return db_spec;
+    return log_mel_spec;
+}
+
+// Function to compute STFT
+std::vector<std::vector<GstFFTF32Complex>> compute_stft(
+    const std::vector<float>& audio, 
+    const std::vector<float>& window, 
+    int n_fft, 
+    int hop_length) {
+    std::vector<std::vector<GstFFTF32Complex>> stft_result;
+
+    // initial FFT from Gstreamer
+    GstFFTF32* fft = gst_fft_f32_new(n_fft, false);
+
+    // apply FFT
+    for (int frame = 0; frame + n_fft < audio.size(); frame += hop_length) {
+        std::vector<float> segment(audio.begin() + frame, audio.begin() + frame + n_fft);
+        std::vector<float> windowed_segment(n_fft);
+        for (int i = 0; i < n_fft; ++i) {
+            windowed_segment[i] = segment[i] * window[i];
+        }
+
+        GstFFTF32Complex out_fft[n_fft];
+        gst_fft_f32_fft(fft, windowed_segment.data(), out_fft);
+
+        std::vector<GstFFTF32Complex> frame_fft(out_fft, out_fft + n_fft / 2 + 1);
+        stft_result.push_back(frame_fft);
+    }
+
+    gst_fft_f32_free(fft);
+
+    return stft_result;
+}
+
+// Function to compute power spectrogram
+std::vector<std::vector<float>> compute_power_spectrogram(const std::vector<std::vector<GstFFTF32Complex>>& stft_matrix) {
+    int spec_height = stft_matrix[0].size();
+    int spec_width = stft_matrix.size();
+
+    std::vector<std::vector<float>> power_spec(spec_height, std::vector<float>(spec_width, 0.0f));
+
+    for (int i = 0; i < spec_width; ++i) {
+        for (int j = 0; j < N_FFT /2 + 1; ++j) {
+            power_spec[j][i] = pow(stft_matrix[i][j].r, 2) + pow(stft_matrix[i][j].i, 2);
+        }
+    }
+    return power_spec;
+}
+
+
+// Function to apply Mel filter bank to power spectrogram
+std::vector<std::vector<float>> apply_mel_filter_bank(
+    const std::vector<std::vector<float>>& power_spec, 
+    const std::vector<std::vector<float>>& mel_filter_bank
+) {
+    int num_frames = power_spec[0].size();
+    int n_mels = mel_filter_bank.size();
+    // (1025 , 216) and (128 , 1025)
+    // std:: cout << power_spec.size() << " " << power_spec[0].size()
+    // << " " << mel_filter_bank.size() << " " << mel_filter_bank[0].size() << "\n";
+
+    std::vector<std::vector<float>> mel_spec(n_mels, std::vector<float>(num_frames, 0.0f));
+
+    for (int i = 0; i < n_mels; ++i) {
+        for (int j = 0; j < num_frames; ++j) {
+            for (size_t k = 0; k < mel_filter_bank[i].size(); ++k) {
+                mel_spec[i][j] += mel_filter_bank[i][k] * power_spec[k][j];
+            }
+        }
+    }
+
+    return mel_spec;
 }
 
 std::vector<std::vector<float>> get_mel_spectrogram(const std::vector<float>& audio, int sr) {
     guint fft_size = N_FFT;
     guint num_fft_bins = N_MELS;
 
-    // Initialize FFT
-    GstFFTF32 *fft = gst_fft_f32_new(fft_size, FALSE);
+    // Calculate padding length if CENTER mode is enabled
+    int paddingLength = 0;
+    std::vector<float> paddedSignal;
+    if (CENTER) {
+    int pad_Length = fft_size / 2;
+    int audioLength = audio.size();
+
+    // Create a new padded signal vector with the required padding
+    paddedSignal.resize(pad_Length + audioLength + pad_Length, 0.0f);
+
+    // Copy the original audio data into the new padded signal vector
+    std::copy(audio.begin(), audio.end(), paddedSignal.begin() + pad_Length);
+    } else {
+        // If no padding is required, just copy the original signal
+        paddedSignal = audio;
+    }
+
+    // Create a Hanning window of appropriate length
+    std::vector<float> window(fft_size);
+    window = hanning_window(fft_size);
+
+    // Compute STFT
+    auto stft_matrix = compute_stft(paddedSignal, window, N_FFT, HOP_LEN);
+    // std::cout << "stft_matrix: " << stft_matrix.size() 
+    // << " " << stft_matrix[0].size() << "\n"; // (216, 1025)
+
+    // Compute power spectrogram
+    auto power_spec = compute_power_spectrogram(stft_matrix);
+    // std::cout << "power_spec: " << power_spec.size() 
+    // << " " << power_spec[0].size() << "\n"; // (1025 , 216)
+
+    // Generate Mel filter bank
+    auto mel_filter_bank = generate_mel_filter_bank(sr, N_FFT, N_MELS, 0.0, FMAX);
+    // std::cout << "mel_filter_bank: " << mel_filter_bank.size() 
+    // << " " << mel_filter_bank[0].size() << "\n"; // (128, 1025)
 
     // Prepare Mel spectrogram container
     std::vector<std::vector<float>> mel_spec(N_MELS, std::vector<float>(SPEC_WIDTH, 0.0f));
-    std::vector<std::vector<float>> mel_filter_bank = generate_mel_filter_bank(sr, fft_size, num_fft_bins, FMAX);
+    // Apply Mel filter bank
+    mel_spec = apply_mel_filter_bank(power_spec, mel_filter_bank);
+    // std::cout << "mel_spec: " << mel_spec.size() 
+    // << " " << mel_spec[0].size() << "\n";
 
-    // Calculate padding length if CENTER mode is enabled
-    int paddingLength = 0;
-    if (CENTER) {
-        int start_padding = fft_size / 2;
-        int audioLength = audio.size();
-        int end_padding = std::max(0, N_FFT - ((audioLength - N_FFT / 2) % HOP_LEN) - N_FFT / 2);
-        paddingLength = start_padding + end_padding;
-    }
+    // Convert to dB scale
+    auto log_mel_spec = power_to_db(mel_spec);
+    // (128, 216) in result
+    // std::cout << "Gel_mel_spectrogram's shape : (" << log_mel_spec.size() << " " 
+    //           << log_mel_spec[0].size() << ")\n";
 
-    int paddedLength = audio.size() + paddingLength;
-    std::vector<float> paddedSignal(audio);
-    paddedSignal.resize(paddedLength, 0.0f);
-
-    // Create a Hamming window of appropriate length
-    float* window = new float[fft_size];
-    hamming_window(fft_size, window);
-
-    // Apply STFT on padded audio
-    std::vector<std::vector<double>> power_spectrum(1 + N_FFT / 2, std::vector<double>(SPEC_WIDTH, 0.0));
-    
-    for (size_t i = 0; i < SPEC_WIDTH; ++i) {
-        size_t start = i* HOP_LEN + N_FFT / 2;
-        size_t end = start + fft_size;
-        std::vector<float> segment(paddedSignal.begin() + start, paddedSignal.begin() + end);
-
-        // Apply Hamming window
-        for (size_t j = 0; j < segment.size(); ++j) {
-            segment[j] *= window[j];
-        }
-
-        GstFFTF32Complex *fft_result = (GstFFTF32Complex *) g_malloc(sizeof(GstFFTF32Complex) * fft_size);
-        GstFFTF32Complex *fft_input = (GstFFTF32Complex *) g_malloc(sizeof(GstFFTF32Complex) * fft_size);
-
-        // Prepare fft_input (complex to complex)
-        for (guint j = 0; j < fft_size; ++j) {
-            fft_input[j].r = segment[j];
-            fft_input[j].i = 0.0f;
-        }
-
-        // Perform FFT
-        gst_fft_f32_fft(fft, (const gfloat *)fft_input, fft_result);
-
-        // Compute power spectrum
-        for (size_t j = 0; j < fft_size / 2 + 1; ++j) {
-            power_spectrum[j][i] = pow(fft_result[j].r, 2) + pow(fft_result[j].i, 2);
-        }
- 
-        // Clean up FFT resources
-        g_free(fft_result);
-        g_free(fft_input);
-    }
-
-    delete[] window;
-    gst_fft_f32_free(fft);
-
-    // Apply Mel filter bank on each frame
-    for (guint m = 0; m < N_MELS; ++m) {
-        for (guint n = 0; n < SPEC_WIDTH ; n++){
-            for (guint k = 0; k < N_FFT/2 +1 ; k++){
-                mel_spec[m][n] += mel_filter_bank[m][k] * power_spectrum[k][n];
-            }
-        }
-    }
-
-    // Convert power spectrogram to dB scale
-    mel_spec = power_to_db(mel_spec);
-
-    return mel_spec;
+    return log_mel_spec;
 }
 
 // Function to write Mel spectrogram to a .txt file
