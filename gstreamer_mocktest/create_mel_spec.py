@@ -59,6 +59,13 @@ def random_padding(y, sr=SAMPLE_RATE):
         y_pad = y[point : point+n_lack]
         return np.concatenate((y, y_pad))
 
+def save_file(spec):
+    with open("python_data.txt", "w") as f:
+        for i in range(len(spec)):
+            for j in range(len(spec[i])):
+                f.write(str(spec[i][j]) + " ")
+            f.write("\n")
+
 def process_audio_file(filepath):
     start_time = time.time()    # 計時
     audio, sr = librosa.load(filepath, sr=SAMPLE_RATE)  # 讀取音檔
@@ -95,7 +102,7 @@ def process_audio_file(filepath):
         spec = librosa.feature.melspectrogram(y=audio, sr=SAMPLE_RATE, fmax=FMAX, n_mels=N_MELS, hop_length=HOP_LEN, n_fft=N_FFT)
         spec = librosa.power_to_db(spec)
         np.set_printoptions( threshold= 128*216 )
-        print(spec.shape, '\n', spec)
+        save_file(spec)
 
         # Plot the mel spectrogram
         fig = librosa.display.specshow(spec, sr=SAMPLE_RATE, hop_length=HOP_LEN, x_axis='time', y_axis='mel', cmap='viridis')
@@ -111,7 +118,7 @@ def process_audio_file(filepath):
         plt.close()
     
     end_time = time.time()
-    print(f"Processed {os.path.basename(filepath)} in {end_time - start_time:.2f} seconds")
+    # print(f"Processed {os.path.basename(filepath)} in {end_time - start_time:.2f} seconds")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
