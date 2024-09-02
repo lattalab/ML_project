@@ -1,8 +1,14 @@
+Co-Creation with [AnnTaiwan]([https://github.com/purnasth](https://github.com/AnnTaiwan?tab=repositories)  
+Other Source:　
+* https://github.com/AnnTaiwan/Graduate-Project/tree/main
+* https://github.com/AnnTaiwan/Vitis-ai-on-ubuntu
+* https://github.com/AnnTaiwan/flask-ngrok-ml
+
 # How to read?
 接下來會逐一解釋每個目錄在做甚麼，通常以列點式說明每個項目大概在什麼。
 - [ ] 最終版本
 
-## Base directory
+## :file_folder: Base directory 
 Dataset: https://www.kaggle.com/datasets/awsaf49/asvpoof-2019-dataset
 
 currently developed on `PA` dataset.
@@ -16,7 +22,8 @@ currently developed on `PA` dataset.
 ### Result
 希望準確率能達到九成，目前在eval資料集下的準確率表現是最好84%。
 
-## Linebot (start at 2024/6/15)
+## :file_folder: Linebot (start at 2024/6/15)
+**啟動說明**  
 1. 去Line Developement 建立一個LineBot
 2. 回應設定:Webhook要打開 (用來設定callback網址用的)
 3. 找到屬於LineBot的CHANNEL_ACCESS_TOKEN 跟 CHANNEL_SECRET 及 USER_ID
@@ -32,7 +39,7 @@ render.yaml 包含部署到 Render 需要的資訊，像是範例程式如何 bu
 requirements.txt 程式所需要的套件集  
 Build Command:./build.sh  (會執行build.sh的功能)  
 
-**設計理念**
+**設計理念**  
 把這個當作專題當中vitis-ai的後處理。 (目前算完成)
 由client.cpp or client.py 上傳資料到指定網站上，在啟動Linebot警告功能。(但不是最終vitis-ai的執行檔)
 
@@ -68,9 +75,12 @@ Send message to your linebot
 * 優化介面，會詢問使用者意見，根據使用者所選的選項進行動作  
 ![image](https://github.com/user-attachments/assets/91c5519f-6ec6-47af-a670-eb377d71162c)  
 * 使用`Gemini API`結合文本分析，使用者能選擇是否要判斷合成語音中的文本內容  
-![image](https://github.com/user-attachments/assets/5b868fd6-b1ec-4f47-b0b8-dde92c2d6072)  
+![image](https://github.com/user-attachments/assets/5b868fd6-b1ec-4f47-b0b8-dde92c2d6072)
 
-## CH_AiSound (2024/6/24)
+### Conclusion
+特色: 提供線上判斷合成語音的平台，搭配嵌入式系統(Vitis-AI)的設計，也能當作一個簡單的警示系統。
+
+## :file_folder: CH_AiSound (2024/6/24)
 * spectrum.py & model.ipynb: 開始訓練分辨中文合成語音模型
 資料來自`CFAD`跟自行生成的語音(elevanlabs、TTSMAKER)
 * spectrum.cpp: 嘗試用C++寫出python librosa轉換成頻譜圖功能，引用其他公開程式碼  
@@ -93,7 +103,10 @@ vitis-ai可以跑python，~~暫定不需要研究C++轉成頻譜圖。~~
 在`CH_AiSound/news/update2`底下加入新增檔案，主要內容為優化先前的C語言Spectrogram寫法，並寫了一些檔案做數據比對，最終結果可以直接比較圖，有達到非常近似的效果了。  
 缺點: 相比原始python轉圖片檔案，沒有對音訊長度做剪裁、過濾掉強度較小的部分。
 
-## denoise (start at 2024/6/30)
+### Conclusion
+練習訓練`中文`合成語音的CNN模型、設計C語言Mel-spectrogram寫法。
+
+## :file_folder: denoise (start at 2024/6/30)
 Make use of `noisereduce` library to achieve denoise feature.
 
 Further:
@@ -103,8 +116,17 @@ Further:
 ### Result
 暫定用noisereduce去雜音效果不錯，其他問題會影響模型再來調適。  
 
-## analysis (2024/8/6)
+## :file_folder: analysis (2024/8/6)
+目的: 特徵分析，找出合成語音的判斷關鍵 (但目前結果僅供推測參考用)  
 * process_audio.ipynb: 對三種目前常用的訓練特徵(MFCC、Chroma、Mel-spectrogram)進行分析畫分布圖  
 * other_method.ipynb : 考慮其他可能用到的聲音特徵，依樣進行分析畫分布圖  
 * t_test.ipynb : 用t檢定比較 合成語音跟真實語音在某特定特徵下分布差異 (平均是否相同)  
 * scatter.ipynb: 將高維特徵進行降維畫散佈圖，看是否能找出差異  
+
+## :file_folder: gstreamer_mocktest (2024/8/31~2024/9/1)
+Main Goal : Use `FFT` function from Gstreamer library and mimic how python librosa write a mel-spectrogram.  
+
+* cal_mel_spec.cpp : 執行Mel-spectrogram的計算邏輯，並將結果寫到TXT檔中。
+* plot_mel_spec_from_txt.cpp : 根據txt檔的結果進行畫圖。  
+
+![ComparedResult](https://github.com/user-attachments/assets/f52e6a95-c14a-4289-8a5e-2a4307f4cb81)

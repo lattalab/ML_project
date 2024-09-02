@@ -66,25 +66,17 @@ def process_audio_file(filepath):
     # 去除雜訊
     rn_audio = nr.reduce_noise(y=audio, sr=SAMPLE_RATE, stationary=True, prop_decrease=0.95, n_fft=N_FFT)
     
-    # delete margin in the beginning and end (濾掉強度小)
-    mask, _ = envelope(rn_audio, SAMPLE_RATE, threshold)
-    # find the first and last point larger than threshold
-    start_idx = np.argmax(mask)
-    # mask[::-1] reverse the mask , np.argmax find the first point larger than threshold
-    # and then reverse it back to the original order by calulating the length of the mask - np.argmax(mask[::-1])
-    end_idx = len(mask) - np.argmax(mask[::-1]) 
-    audio_trimmed = rn_audio[start_idx:end_idx]
-    
-    # print("start_idx: ", start_idx, "end_idx: ", end_idx, "Actual END:", len(mask))
+    # Here, remove the filter of lower energy.
+
     # Split audio into segments of 5 seconds
     # if audio length less than 5 sec then should generate 1 picture.
-    num_segments = max(1, int(len(audio_trimmed) / AUDIO_LEN))
+    num_segments = max(1, ceil(len(rn_audio) / AUDIO_LEN))
     
     for i in range(num_segments):
         # 設定取樣區間
         start_sample = i * AUDIO_LEN
-        end_sample = start_sample + AUDIO_LEN
-        audio_segment = audio_trimmed[start_sample:end_sample]
+        end_sample = min(start_sample + AUDIO_LEN, len(rn_audio))
+        audio_segment = rn_audio[start_sample:end_sample]
 
         # pad the audio with the original audio or cut the audio
         if len(audio_segment) < AUDIO_LEN:
