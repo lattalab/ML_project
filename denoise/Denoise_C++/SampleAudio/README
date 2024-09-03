@@ -1,0 +1,10 @@
+Here are some audio file I used to test.  
+
+1. CH_fake_noise.wav (A sound file from CFAD)
+2. CH_fake_denoise.wav:
+ 	the audio file from 1. and deal with denoise by python `noisereduce` library.
+3. recordAudio.wav:
+	the audio given by other people with actually record sound by microphone.
+4. fixed_recordAudio.wav:
+	the audio 3. modify by Sox to fix some error.
+	UpdateNote: this can be ignored.

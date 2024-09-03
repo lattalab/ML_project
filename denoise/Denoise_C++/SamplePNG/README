@@ -1,0 +1,13 @@
+Here are some audio file I used to test.  
+
+1. CH_fake_noise.png:
+	 directly transfer to mel-spectrogram.
+2. CH_fake_denoise.png:
+ 	the audio file from 1. and deal with denoise by python `noisereduce` library, 
+ 	and tansfer to mel-spectrogram.
+3. output_denoise.png:
+	audio 1. deal with denoise by SoX, and transfer to Mel-spectrogram.
+4. record.png
+	the sound file recorded by microphone, and "directly" transfer to Mel-spectrogrma.
+5. denoise_record.png
+	the sound file after denoising by SoX, and then transfer to Mel-spectrogram.
