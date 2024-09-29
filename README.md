@@ -127,6 +127,11 @@ Further:
 Main Goal : Use `FFT` function from Gstreamer library and mimic how python librosa write a mel-spectrogram.  
 
 * cal_mel_spec.cpp : 執行Mel-spectrogram的計算邏輯，並將結果寫到TXT檔中。
-* plot_mel_spec_from_txt.cpp : 根據txt檔的結果進行畫圖。  
+* plot_mel_spec_from_txt.cpp : 根據txt檔的結果進行畫圖。
 
-![ComparedResult](https://github.com/user-attachments/assets/f52e6a95-c14a-4289-8a5e-2a4307f4cb81)
+![ComparedResult](https://github.com/user-attachments/assets/f52e6a95-c14a-4289-8a5e-2a4307f4cb81)  
+
+## :file_folder: real-time recording test (2024/9/30)
+測試即時收音，目前設計為由`recording.cpp`一直錄音，自動五秒切斷。  
+在開啟另一個terminal執行`.sh`檔，跑轉換頻譜圖、模型判斷等過程。  
+
