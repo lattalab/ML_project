@@ -1,12 +1,16 @@
-Co-Creation with [AnnTaiwan]([https://github.com/purnasth](https://github.com/AnnTaiwan?tab=repositories)  
+Co-Creation with [AnnTaiwan](https://github.com/AnnTaiwan)   
 Other Source:　
 * https://github.com/AnnTaiwan/Graduate-Project/tree/main
 * https://github.com/AnnTaiwan/Vitis-ai-on-ubuntu
 * https://github.com/AnnTaiwan/flask-ngrok-ml
 
+# Topic: 
+AI生成語音辨識的應用  
+Developing an application about detecting AI generated voice  
+
 # How to read?
 接下來會逐一解釋每個目錄在做甚麼，通常以列點式說明每個項目大概在什麼。
-- [ ] 最終版本
+- [X] 最終版本
 
 ## :file_folder: Base directory 
 Dataset: https://www.kaggle.com/datasets/awsaf49/asvpoof-2019-dataset
